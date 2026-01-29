@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Generated files
+frontend/src/generated/
+
+
+# IDE
+.idea/
+.vscode/
+.cursorrules
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NPL CLI
+.npl/
+openapi/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
