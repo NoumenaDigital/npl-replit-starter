@@ -1,7 +1,6 @@
 # NPL + React Replit Template Makefile
-# Alternative to workflow buttons for those who prefer make
 
-.PHONY: help setup setup-quick env install check-setup deploy deploy-npl deploy-npl-clean deploy-frontend client users keycloak add-redirect run build clean login preflight lsp bootstrap
+.PHONY: help setup setup-quick env install check-setup deploy deploy-npl-clean deploy-npl client users keycloak add-redirect run build deploy-frontend check test clean lsp login preflight bootstrap
 
 # Default target
 help:
@@ -9,30 +8,32 @@ help:
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
-	@echo "Setup targets:"
+	@echo "Initial setup targets:"
 	@echo "  setup      - Full interactive setup (includes login prompt)"
-	@echo "  setup-quick - Setup without login (use if already logged in)"
 	@echo "  env        - Generate .env from NPL_TENANT and NPL_APP"
 	@echo "  install    - Install NPL CLI and npm dependencies"
-	@echo "  deploy     - Deploy both NPL and frontend to Noumena Cloud"
-	@echo "  deploy-npl - Deploy NPL protocols to Noumena Cloud"
-	@echo "  deploy-npl-clean - Clear and deploy NPL (use when changing protocols)"
-	@echo "  deploy-frontend - Deploy frontend to Noumena Cloud"
-	@echo "  client     - Generate TypeScript API client from OpenAPI"
+	@echo "  lsp        - Install NPL Language Server"
 	@echo "  users      - Provision seed users in Keycloak"
 	@echo "  keycloak   - Configure Keycloak client (redirect URIs)"
+	@echo "  setup-quick - Setup without login, keycloak configuration nor user provisioning (use if those steps already done)"
 	@echo ""
-	@echo "Development targets:"
-	@echo "  run        - Start the development server"
-	@echo "  build      - Build for production"
+	@echo "Backend development and deployment targets:"
 	@echo "  check      - Validate NPL code"
 	@echo "  test       - Run NPL tests"
+	@echo "  deploy-npl-clean - Deploy NPL protocols to Noumena Cloud, clearing any existing ones first (part of Full Setup flow)"
+	@echo "  deploy-npl - Deploy NPL protocols without clearing (when using migrations)"
+	@echo ""
+	@echo "Frontend development and deployment targets:"
+	@echo "  client     - Generate TypeScript API client from OpenAPI (part of Full Setup flow)"
+	@echo "  run        - Start frontend on the development server"
+	@echo "  build      - Build frontend for production"
+	@echo "  deploy-frontend - Deploy frontend to Noumena Cloud"
+	@echo "  deploy     - Deploy both NPL and frontend to Noumena Cloud"
 	@echo ""
 	@echo "Utility targets:"
 	@echo "  login      - Login to Noumena Cloud"
 	@echo "  preflight  - Run pre-flight checks"
 	@echo "  add-redirect URL=<url> - Add custom redirect URI for external hosting"
-	@echo "  lsp        - Install NPL Language Server"
 	@echo "  bootstrap  - Create initial protocol instances (customize scripts/bootstrap.sh first)"
 	@echo ""
 	@echo "Configuration (edit noumena.config file):"
@@ -47,14 +48,19 @@ help:
 setup: env install lsp
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "📦 Dependencies installed! Now you need to login."
+	@echo "📦 Dependencies installed! Now you need to log in."
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
-	@echo "🔐 Opening browser for Noumena Cloud login..."
-	@export PATH="$$HOME/.npl/bin:$$PATH" && npl cloud login
+	@$(MAKE) login
 	@echo ""
-	@echo "✅ Logged in! Continuing with deployment..."
-	@$(MAKE) deploy-npl client
+	@echo "✅ Logged in! Continuing with backend deployment..."
+	@$(MAKE) deploy-npl-clean
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "☁️ Backend deployed! Now generating API client."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@$(MAKE) client
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "✅ Core setup complete!"
@@ -85,8 +91,8 @@ setup: env install lsp
 	@echo ""
 	@echo "Or click the 'Run' button in Replit."
 
-# Quick setup (assumes already logged in)
-setup-quick: env install lsp deploy-npl client
+# Quick setup (assumes already logged in, and keycloak/users done)
+setup-quick: env install lsp deploy-npl-clean client
 	@echo ""
 	@echo "✅ Setup complete! Use 'make run' to start the frontend."
 
@@ -111,21 +117,21 @@ check-setup:
 		exit 1; \
 	fi
 
-# Deploy both NPL and frontend
-deploy: check-setup deploy-npl build deploy-frontend
+# Deploy both NPL and frontend (with a clean NPL deployment)
+deploy: check-setup deploy-npl-clean build deploy-frontend
 	@echo ""
 	@echo "✅ Full deployment complete!"
 
-# Deploy NPL to Noumena Cloud
-deploy-npl: check-setup
+# Deploy NPL, clearing any previous deployment first (recommended when changing protocols)
+deploy-npl-clean: check-setup
+	@echo "🧹 Clearing existing protocols..."
+	@source ./noumena.config  && export PATH="$$HOME/.npl/bin:$$PATH" && npl cloud clear --tenant $$NPL_TENANT --app $$NPL_APP
 	@./scripts/deploy-npl.sh
 	@echo ""
 	@echo "💡 Don't forget: run 'make client' to regenerate TypeScript types!"
 
-# Deploy NPL with clear (recommended when changing protocols)
-deploy-npl-clean: check-setup
-	@echo "🧹 Clearing existing protocols..."
-	@export PATH="$$HOME/.npl/bin:$$PATH" && npl cloud clear --tenant $$NPL_TENANT --app $$NPL_APP
+# Deploy NPL to Noumena Cloud, without clearing (consider when using migrations)
+deploy-npl: check-setup
 	@./scripts/deploy-npl.sh
 	@echo ""
 	@echo "💡 Don't forget: run 'make client' to regenerate TypeScript types!"
