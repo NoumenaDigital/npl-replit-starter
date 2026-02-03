@@ -46,14 +46,14 @@ fi
 # Check environment variables
 if [ -z "$NPL_TENANT" ]; then
     echo "⚠️  NPL_TENANT not set"
-    echo "   Add it in Replit's Secrets tab or export it"
+    echo "   Add it in noumena.config and export it"
 else
     echo "✅ NPL_TENANT: $NPL_TENANT"
 fi
 
 if [ -z "$NPL_APP" ]; then
     echo "⚠️  NPL_APP not set"
-    echo "   Add it in Replit's Secrets tab or export it"
+    echo "   Add it in noumena.config and export it"
 else
     echo "✅ NPL_APP: $NPL_APP"
 fi

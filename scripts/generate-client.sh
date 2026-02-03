@@ -1,5 +1,6 @@
 #!/bin/bash
-# Generate TypeScript client from NPL OpenAPI spec
+# Generate TypeScript client for NPL API deployed to Noumena Cloud
+# (from local NPL definitions)
 
 set -e
 
@@ -28,7 +29,7 @@ fi
 
 echo "📥 Generating OpenAPI specs for all packages..."
 
-# Generate OpenAPI specs for all packages
+# Generate local OpenAPI specs for all packages
 if ! npl openapi; then
     echo "❌ Failed to generate OpenAPI specs"
     echo ""

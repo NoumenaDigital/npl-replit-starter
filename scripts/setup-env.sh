@@ -2,9 +2,7 @@
 # Generate environment configuration from tenant and app name
 # This script derives all URLs from NPL_TENANT and NPL_APP
 #
-# Configuration sources (in priority order):
-# 1. noumena.config file (recommended - committed to repo)
-# 2. Environment variables / Replit Secrets
+# Configuration source: noumena.config file
 
 set -e
 
@@ -15,6 +13,15 @@ if [ -f "noumena.config" ]; then
     echo "📁 Found noumena.config file"
     # Source the config file (it uses shell variable syntax)
     source noumena.config
+else
+    echo ""
+    echo "❌ Error: noumena.config file not found"
+    echo ""
+    echo "   Please create a noumena.config file in the project root with:"
+    echo "   NPL_TENANT=your-tenant"
+    echo "   NPL_APP=your-app"
+    echo ""
+    exit 1
 fi
 
 # Check if we have the required values
@@ -22,8 +29,7 @@ if [ -z "$NPL_TENANT" ]; then
     echo ""
     echo "❌ Error: NPL_TENANT not configured"
     echo ""
-    echo "   Option 1 (Recommended): Edit noumena.config file"
-    echo "   Option 2: Add NPL_TENANT in Replit's Secrets tab"
+    echo "   Edit noumena.config file to provide value"
     echo ""
     exit 1
 fi
@@ -32,8 +38,7 @@ if [ -z "$NPL_APP" ]; then
     echo ""
     echo "❌ Error: NPL_APP not configured"
     echo ""
-    echo "   Option 1 (Recommended): Edit noumena.config file"
-    echo "   Option 2: Add NPL_APP in Replit's Secrets tab"
+    echo "   Edit noumena.config file to provide value"
     echo ""
     exit 1
 fi
