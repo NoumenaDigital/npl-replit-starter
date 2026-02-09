@@ -50,16 +50,16 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
     loadIous()
   }, [loadIous])
 
-  const handleCreateIou = async (payeeEmail: string, amount: number) => {
+  const handleCreateIou = async (lenderEmail: string, amount: number) => {
     try {
       setError(null)
       const { error: apiError } = await client.POST('/npl/demo/Iou/', {
         body: {
           '@parties': {
-            issuer: partyFromEmail(userEmail),
-            payee: partyFromEmail(payeeEmail)
+            borrower: partyFromEmail(userEmail),
+            lender: partyFromEmail(lenderEmail)
           },
-          forAmount: amount
+          initialDebt: amount
         }
       })
       if (apiError) {
@@ -88,18 +88,33 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
     }
   }
 
-  const handleForgive = async (iouId: string) => {
+  const handleConfirmPayment = async (iouId: string) => {
     try {
       setError(null)
-      const { error: apiError } = await client.POST('/npl/demo/Iou/{id}/forgive', {
+      const { error: apiError } = await client.POST('/npl/demo/Iou/{id}/confirmPayment', {
         params: { path: { id: iouId } }
       })
       if (apiError) {
-        throw new Error(apiError.message || 'Failed to forgive IOU')
+        throw new Error(apiError.message || 'Failed to confirm payment')
       }
       await loadIous()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to forgive IOU')
+      setError(err instanceof Error ? err.message : 'Failed to confirm payment')
+    }
+  }
+
+  const handleCancel = async (iouId: string) => {
+    try {
+      setError(null)
+      const { error: apiError } = await client.POST('/npl/demo/Iou/{id}/cancel', {
+        params: { path: { id: iouId } }
+      })
+      if (apiError) {
+        throw new Error(apiError.message || 'Failed to cancel IOU')
+      }
+      await loadIous()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel IOU')
     }
   }
 
@@ -156,7 +171,8 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
                 iou={iou}
                 currentUser={userEmail}
                 onPay={handlePay}
-                onForgive={handleForgive}
+                onConfirmPayment={handleConfirmPayment}
+                onCancel={handleCancel}
               />
             ))}
           </div>

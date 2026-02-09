@@ -1,45 +1,66 @@
 package demo
 
 @test
-function test_create_iou(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    test.assertEquals(100, iou.getAmountOwed['issuer'](), "Initial amount should be 100");
+function test_create_with_zero_amount(test: Test) -> {
+    test.assertFails(function() -> Iou['borrower', 'lender'](0), "Creating IOU with zero amount should fail");
 };
 
 @test
-function test_partial_payment(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    iou.pay['issuer'](30);
-    test.assertEquals(70, iou.getAmountOwed['issuer'](), "Amount owed should be 70 after paying 30");
+function test_initial_amount_owed(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+
+   test.assertEquals(100, iou.remainingDebt, "Remaining debt should equal initial value");
+};
+
+@test
+function test_amount_owed_after_pay(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+   iou.pay['borrower'](25);
+
+   test.assertEquals(100, iou.remainingDebt, "Remaining debt should not reflect unconfirmed payment");
+};
+
+@test
+function test_amount_owed_after_confirmPayment(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+   iou.pay['borrower'](25);
+   iou.confirmPayment['lender']();
+
+   test.assertEquals(75, iou.remainingDebt, "Remaining debt should reflect confirmed payment");
+};
+
+@test
+function test_pay_negative_amount(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+
+   test.assertFails(function() -> iou.pay['borrower'](-10), "Paying negative amounts should fail");
+};
+
+@test
+function test_overpaying(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+
+   test.assertFails(function() -> iou.pay['borrower'](101), "Overpaying should fail");
 };
 
 @test
 function test_full_payment(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    iou.pay['issuer'](100);
-    test.assertEquals(iou.activeState().getOrFail(), Iou.States.paid, "IOU should be paid after full payment");
+   var iou = Iou['borrower', 'lender'](100);
+   iou.pay['borrower'](100);
+   iou.confirmPayment['lender']();
+   test.assertEquals(iou.activeState().getOrFail(), Iou.States.settled, "IOU should be settled after full payment");
 };
 
 @test
-function test_forgive(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    iou.forgive['payee']();
-    test.assertEquals(iou.activeState().getOrFail(), Iou.States.forgiven, "IOU should be forgiven");
+function test_cancel(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+   iou.cancel['lender']();
+   test.assertEquals(iou.activeState().getOrFail(), Iou.States.cancelled, "IOU should be cancelled");
 };
 
 @test
-function test_pay_negative_amount_fails(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    test.assertFails(function() -> iou.pay['issuer'](-10), "Paying negative amounts should fail");
-};
-
-@test
-function test_pay_more_than_owed_fails(test: Test) -> {
-    var iou = Iou['issuer', 'payee'](100);
-    test.assertFails(function() -> iou.pay['issuer'](150), "Paying more than owed should fail");
-};
-
-@test
-function test_create_with_zero_amount_fails(test: Test) -> {
-    test.assertFails(function() -> Iou['issuer', 'payee'](0), "Creating IOU with zero amount should fail");
+function test_remaining_debt_zero_after_cancel(test: Test) -> {
+   var iou = Iou['borrower', 'lender'](100);
+   iou.cancel['lender']();
+   test.assertEquals(0, iou.remainingDebt, "Remaining debt should be zero after cancellation");
 };

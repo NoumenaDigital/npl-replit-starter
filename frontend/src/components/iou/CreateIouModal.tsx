@@ -1,19 +1,19 @@
 import { useState } from 'react'
 
 interface CreateIouModalProps {
-  onSubmit: (payeeEmail: string, amount: number) => void
+  onSubmit: (lenderEmail: string, amount: number) => void
   onClose: () => void
 }
 
 export function CreateIouModal({ onSubmit, onClose }: CreateIouModalProps) {
-  const [payeeEmail, setPayeeEmail] = useState('')
+  const [lenderEmail, setLenderEmail] = useState('')
   const [amount, setAmount] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const numAmount = parseFloat(amount)
-    if (payeeEmail && numAmount > 0) {
-      onSubmit(payeeEmail, numAmount)
+    if (lenderEmail && numAmount > 0) {
+      onSubmit(lenderEmail, numAmount)
     }
   }
 
@@ -26,13 +26,13 @@ export function CreateIouModal({ onSubmit, onClose }: CreateIouModalProps) {
         </div>
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="payeeEmail">Payee Email</label>
+            <label htmlFor="lenderEmail">Lender Email</label>
             <input
-              id="payeeEmail"
+              id="lenderEmail"
               type="email"
               placeholder="bob@example.com"
-              value={payeeEmail}
-              onChange={(e) => setPayeeEmail(e.target.value)}
+              value={lenderEmail}
+              onChange={(e) => setLenderEmail(e.target.value)}
               required
             />
           </div>

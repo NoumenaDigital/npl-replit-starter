@@ -6,7 +6,7 @@ export type IouList = components['schemas']['Iou_List']
 export type IouCreate = components['schemas']['Iou_Create']
 export type IouStates = components['schemas']['Iou_States']
 export type IouPayCommand = components['schemas']['Iou_Pay_Command']
-export type TimestampedAmount = components['schemas']['TimestampedAmount']
+export type Payment = components['schemas']['Payment']
 
 export function partyFromEmail(email: string): Party {
   return {
