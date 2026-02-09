@@ -5,88 +5,79 @@ package demo
  * @param amount The amount of the payment
  * @param timestamp The time at which the payment was made
  */
-struct TimestampedAmount {
+struct Payment {
     amount: Number,
     timestamp: DateTime
 };
 
 /**
- * Calculate the total of a list of timestamped amounts
- * @param entries The list of timestamped amounts
- * @return The total amount
- */
-function total(entries: List<TimestampedAmount>) -> entries.map(function(p: TimestampedAmount) -> p.amount).sum();
-
-/**
  * Simple IOU (I Owe You) protocol demonstrating NPL capabilities.
- * 
- * This protocol models a debt relationship between an issuer and a payee,
- * with support for partial payments and forgiveness.
- * 
- * @param issuer The party who owes the money
- * @param payee The party who is owed the money
- * @param forAmount The initial amount of the IOU
+ *
+ * This protocol models a debt relationship between an borrower and a lender,
+ * with support for partial payments and debt cancellation.
+ *
+ * @param borrower The party who owes the money
+ * @param lender The party who is owed the money
+ * @param initialDebt The initial amount owed as specified by the IOU
  */
 @api
-protocol[issuer, payee] Iou(var forAmount: Number) {
-    require(forAmount > 0, "Initial amount must be strictly positive");
+protocol[borrower, lender] Iou(var initialDebt: Number) {
+    require(initialDebt > 0, "Initial debt must be strictly positive");
 
-    initial state unpaid;
-    final state paid;
-    final state forgiven;
+    initial state due;
+    state awaitingPaymentConfirmation;
+    final state settled;
+    final state cancelled;
 
-    private var payments = listOf<TimestampedAmount>();
-
-    /**
-     * Calculate the remaining amount owed
-     * @return The amount still owed
-     */
-    function amountOwed() returns Number -> forAmount - total(payments);
+    var paymentClaim: Optional<Payment> = optionalOf<Payment>();
+    var payments: List<Payment> = listOf<Payment>();
+    var remainingDebt: Number = initialDebt;
 
     /**
-     * Make a payment towards the IOU.
-     * Can only be called by the issuer while the IOU is unpaid.
+     * Claim a payment has been made towards the IOU.
+     * Can only be called by the borrower while the IOU is due, i.e. before the debt is fully paid or cancelled, and
+     * while no other payment is awaiting confirmation.
      * @param amount The amount to pay (must be positive and not exceed amount owed)
      */
     @api
-    permission[issuer] pay(amount: Number) | unpaid {
+    permission[borrower] pay(amount: Number) | due {
         require(amount > 0, "Amount must be strictly positive");
-        require(amount <= amountOwed(), "Amount may not exceed amount owed");
+        require(amount <= remainingDebt, "Amount may not exceed remaining debt");
 
-        var p = TimestampedAmount(amount = amount, timestamp = now());
-        payments = payments.with(p);
+        paymentClaim = optionalOf(
+            Payment(amount = amount, timestamp = now())
+        );
 
-        if (amountOwed() == 0) {
-            become paid;
+        become awaitingPaymentConfirmation;
+
+    };
+
+    /**
+     * Confirm a payment claimed by the borrower.
+     * Can only be called by the lender while a payment is awaiting confirmation.
+     */
+    @api
+    permission[lender] confirmPayment() | awaitingPaymentConfirmation {
+
+        var confirmedPayment = paymentClaim.getOrFail();
+        remainingDebt = remainingDebt - confirmedPayment.amount;
+        payments = payments.with(confirmedPayment);
+        paymentClaim = optionalOf<Payment>();
+
+        if (remainingDebt > 0) {
+            become due;
+        } else {
+            become settled;
         };
     };
 
     /**
-     * Forgive the remaining debt.
-     * Can only be called by the payee while the IOU is unpaid.
+     * Cancel the remaining debt.
+     * Can only be called by the lender while the IOU is due.
      */
     @api
-    permission[payee] forgive() | unpaid {
-        become forgiven;
-    };
-
-    /**
-     * Get the current amount owed.
-     * Can be called by either party while the IOU is unpaid.
-     * @return The remaining amount owed
-     */
-    @api
-    permission[issuer | payee] getAmountOwed() returns Number | unpaid {
-        return amountOwed();
-    };
-
-    /**
-     * Get the payment history.
-     * Can be called by either party while the IOU is unpaid.
-     * @return List of all payments made
-     */
-    @api
-    permission[issuer | payee] getPaymentHistory() returns List<TimestampedAmount> | unpaid {
-        return payments;
+    permission[lender] cancel() | due, awaitingPaymentConfirmation {
+        remainingDebt = 0;
+        become cancelled;
     };
 }

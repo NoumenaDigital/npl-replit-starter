@@ -31,7 +31,7 @@ export function DevLoginForm({ onLogin, error }: DevLoginFormProps) {
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="username">Username or Email</label>
+            <label htmlFor="username">Username</label>
             <input
               id="username"
               type="text"

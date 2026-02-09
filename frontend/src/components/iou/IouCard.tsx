@@ -5,22 +5,26 @@ interface IouCardProps {
   iou: Iou
   currentUser: string
   onPay: (id: string, amount: number) => void
-  onForgive: (id: string) => void
+  onConfirmPayment: (id: string) => void
+  onCancel: (id: string) => void
 }
 
-export function IouCard({ iou, currentUser, onPay, onForgive }: IouCardProps) {
+export function IouCard({ iou, currentUser, onPay, onConfirmPayment, onCancel }: IouCardProps) {
   const [payAmount, setPayAmount] = useState('')
   
-  const issuerEmail = getPartyEmail(iou['@parties'].issuer)
-  const payeeEmail = getPartyEmail(iou['@parties'].payee)
-  const forAmount = iou.forAmount
+  const borrowerEmail = getPartyEmail(iou['@parties'].borrower)
+  const lenderEmail = getPartyEmail(iou['@parties'].lender)
+  const remainingDebt = iou.remainingDebt
   const state = iou['@state']
+  const paymentClaim = iou.paymentClaim
 
-  const isIssuer = issuerEmail === currentUser
-  const isPayee = payeeEmail === currentUser
-  const isPaid = state === 'paid'
-  const isForgiven = state === 'forgiven'
-  const isActive = !isPaid && !isForgiven
+  const isBorrower = borrowerEmail === currentUser
+  const isLender = lenderEmail === currentUser
+  const isDue = state === 'due'
+  const isAwaitingConfirmation = state === 'awaitingPaymentConfirmation'
+  const isSettled = state === 'settled'
+  const isCancelled = state === 'cancelled'
+  const isActive = isDue || isAwaitingConfirmation
 
   const handlePaySubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,31 +36,49 @@ export function IouCard({ iou, currentUser, onPay, onForgive }: IouCardProps) {
   }
 
   return (
-    <div className={`iou-card ${isPaid ? 'paid' : ''} ${isForgiven ? 'forgiven' : ''}`}>
+    <div className={`iou-card ${isSettled ? 'settled' : ''} ${isCancelled ? 'cancelled' : ''} ${isAwaitingConfirmation ? 'awaiting-confirmation' : ''}`}>
       <div className="iou-header">
-        <span className={`state-badge ${state}`}>{state}</span>
+        <span className={`state-badge ${state}`}>
+          {state === 'awaitingPaymentConfirmation' ? 'Awaiting Payment Confirmation' : state}
+        </span>
         <span className="iou-id">{iou['@id'].slice(0, 8)}...</span>
       </div>
       
       <div className="iou-amount">
-        <span className="currency">$</span>
-        <span className="value">{forAmount.toLocaleString()}</span>
+        <div className="amount-item">
+          <span className="amount-label">Remaining Debt</span>
+          <div className="amount-value">
+            <span className="currency">$</span>
+            <span className="value">{remainingDebt.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="amount-item">
+          {paymentClaim && (
+            <>
+              <span className="amount-label">Staged Payment</span>
+              <div className="amount-value">
+                <span className="currency">$</span>
+                <span className="value">{paymentClaim.amount.toLocaleString()}</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="iou-parties">
         <div className="party">
-          <span className="party-label">From (Issuer)</span>
-          <span className="party-value">{issuerEmail}</span>
+          <span className="party-label">Owed By (Borrower)</span>
+          <span className="party-value">{borrowerEmail}</span>
         </div>
         <div className="party">
-          <span className="party-label">To (Payee)</span>
-          <span className="party-value">{payeeEmail}</span>
+          <span className="party-label">To (Lender)</span>
+          <span className="party-value">{lenderEmail}</span>
         </div>
       </div>
 
-      {isActive && (
+      {isActive && ((isBorrower && isDue) || isLender) && (
         <div className="iou-actions">
-          {isIssuer && (
+          {isBorrower && isDue && (
             <form onSubmit={handlePaySubmit} className="pay-form">
               <input
                 type="number"
@@ -66,15 +88,23 @@ export function IouCard({ iou, currentUser, onPay, onForgive }: IouCardProps) {
                 min="0.01"
                 step="0.01"
               />
-              <button type="submit" className="btn btn-primary">Pay</button>
+              <button type="submit" className="btn btn-primary">Submit Payment</button>
             </form>
           )}
-          {isPayee && (
+          {isLender && (
             <button 
               className="btn btn-secondary"
-              onClick={() => onForgive(iou['@id'])}
+              onClick={() => onCancel(iou['@id'])}
             >
-              Forgive
+              Cancel Debt
+            </button>
+          )}
+          {isLender && isAwaitingConfirmation && (
+            <button 
+              className="btn btn-primary confirm-payment-btn"
+              onClick={() => onConfirmPayment(iou['@id'])}
+            >
+              Confirm Paid
             </button>
           )}
         </div>
