@@ -4,6 +4,7 @@ import { partyFromEmail, type Iou } from '../../api/types'
 import { LoadingState } from '../shared/LoadingState'
 import { IouCard } from '../iou/IouCard'
 import { CreateIouModal } from '../iou/CreateIouModal'
+import { useSSE } from '../../hooks/useSSE'
 
 interface DashboardProps {
   keycloak: Keycloak.KeycloakInstance
@@ -22,11 +23,17 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
     ? ''
     : (import.meta.env.VITE_NPL_ENGINE_URL || 'http://localhost:12000')
 
+  // Shared token getter for both API client and SSE
+  const getToken = useMemo(
+    () => getTokenOverride || (async () => keycloak.token!),
+    [getTokenOverride, keycloak.token]
+  )
+
   // Memoize the API client to prevent re-creation on every render
   const client = useMemo(() => createApiClient({
     engineUrl,
-    getToken: getTokenOverride || (async () => keycloak.token!)
-  }), [engineUrl, getTokenOverride, keycloak.token])
+    getToken
+  }), [engineUrl, getToken])
 
   const userEmail = keycloak.tokenParsed?.email || keycloak.tokenParsed?.preferred_username || 'unknown'
 
@@ -49,6 +56,23 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
   useEffect(() => {
     loadIous()
   }, [loadIous])
+
+  // Set up SSE listener for state change events
+  useSSE({
+    url: `${engineUrl}/api/streams`,
+    getToken,
+    onMessage: (message) => {
+      // Refresh the view when a state change event is received
+      if (message.event === 'state') {
+        console.log('State change event received, refreshing IOUs...', message)
+        loadIous()
+      }
+    },
+    onError: (error) => {
+      console.error('SSE connection error:', error)
+    },
+    enabled: true
+  })
 
   const handleCreateIou = async (lenderEmail: string, amount: number) => {
     try {
