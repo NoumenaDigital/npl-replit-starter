@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createApiClient } from '../../api/client'
 import { partyFromEmail, type Iou } from '../../api/types'
 import { LoadingState } from '../shared/LoadingState'
@@ -18,14 +18,15 @@ export function Dashboard({ keycloak, getTokenOverride }: DashboardProps) {
 
   // Use proxy endpoint if enabled, otherwise use direct URL
   const useProxy = import.meta.env.VITE_USE_PROXY === 'true'
-  const engineUrl = useProxy 
-    ? '' 
+  const engineUrl = useProxy
+    ? ''
     : (import.meta.env.VITE_NPL_ENGINE_URL || 'http://localhost:12000')
-  
-  const client = createApiClient({
+
+  // Memoize the API client to prevent re-creation on every render
+  const client = useMemo(() => createApiClient({
     engineUrl,
     getToken: getTokenOverride || (async () => keycloak.token!)
-  })
+  }), [engineUrl, getTokenOverride, keycloak.token])
 
   const userEmail = keycloak.tokenParsed?.email || keycloak.tokenParsed?.preferred_username || 'unknown'
 
